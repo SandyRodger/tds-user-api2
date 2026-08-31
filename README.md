@@ -478,9 +478,207 @@ BUG_PERSISTS:
 - **end of Chat 1 notes**
 - `php bin/console doctrine:migrations:migrate`
 - change `DATABASE_URL` in `.env` to `DATABASE_URL=mysql://root:password@127.0.0.1:3306/app`
+- check with `php bin/console dbal:run-sql "SHOW TABLES" --force-fetch`
+
+### Module 4: CRUD API
+
+- docker compose exec php php bin/console make:controller
+   - UserController
+   - bug: can't connect to db, change .env line to:
+   - `DATABASE_URL=mysql://root:password@mysql:3306/app`
+   - Also Symfony Flex auto-added a database when doctrine/doctrine-bundle was
+  installed via composer — it appended a Postgres database service to your
+  docker-compose.yml by default. Plus `compose.override.yaml` references this db, so that has to be removed.
+      - `rm compose.override.yaml`
+
+### Read
+
+- start with R because it's simpler to verify. "smoke test"
+- Rememeber your controller can't talk to the db directly. It goes through a repository.
+
+###### UserController.php
+
+```src/Controllers/UserController.php
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\Attribute\Route;
+use App\Repository\UserRepository;
+use App\Entity\User;
+use Symfony\Component\HttpFoundation\Request;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Service\UserService;
+
+final class UserController extends AbstractController
+{
+    #[Route('/user', name: 'app_user_all', methods: ['GET'])]
+    public function index(UserRepository $repo): JsonResponse
+    {
+        return $this->json($repo->findLatestUsers());
+    }
+
+    #[Route('/user/{id}', name: 'app_user_one', methods: ['GET'])]
+    public function showUser(int $id, UserService $userService): JsonResponse
+    {
+        $user = $userService->getUser($id);
+
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        return $this->json($user);
+    }
+
+    #[Route('/user', name: 'app_user_create', methods: ['POST'])] 
+    public function create(Request $request, UserService $userService): JsonResponse
+    {
+        $data = $request->toArray();
+        $user = $userService->createUser($data);
+
+        return $this->json($user, 201);
+    }
+
+    #[Route('/user/{id}', name: 'app_user_delete', methods: ['DELETE'])]
+    public function delete(UserService $userService, int $id): JsonResponse
+    {
+        $deleted = $userService->deleteUser($id);
+
+        if (!$deleted) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        return $this->json(['status' => 'deleted']);
+    }
+
+    #[Route('/user/{id}', name: 'app_user_update', methods: ['PATCH'])]
+    public function update(int $id, Request $request, UserService $userService): JsonResponse
+    {
+        $data = $request->toArray();
+        $updated = $userService->updateUser($data, $id);
+
+        if (!$updated) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        return $this->json($updated);
+    }
+}
+```
+### module 5: Repository
+
+###### UserRepository.php
+
+```
+<?php
+
+namespace App\Repository;
+
+use App\Entity\User;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
+
+/**
+ * @extends ServiceEntityRepository<User>
+ */
+class UserRepository extends ServiceEntityRepository
+{
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, User::class);
+    }
+
+    public function findByEmail(string $email): ?User
+    {
+        return $this->findOneBy(['email' => $email]);
+    }
 
 
+    public function findLatestUsers(): array
+    {
+        return $this->findBy([], ['createdAt' => 'DESC']);
+    }
+}
+```
 
+### Module 6: Service layer
+
+```src/Service/UserService.php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service;
+
+use App\Repository\UserRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\User;
+
+class UserService
+{
+    public function __construct(
+        private UserRepository $userRepository,
+        private EntityManagerInterface $em,
+    ) {}
+
+    public function createUser(array $data): User
+    {
+        $user = new User();
+        $user->setEmail($data['email']);
+        $user->setFirstName($data['firstName']);
+        $user->setLastName($data['lastName']);
+        $user->setCreatedAt(new \DateTimeImmutable());
+
+        $this->em->persist($user);
+        $this->em->flush();
+
+        return $user;
+    }
+
+public function deleteUser(int $id): bool
+{
+    $user = $this->userRepository->find($id);
+
+    if (!$user) {
+        return false;
+    }
+
+    $this->em->remove($user);
+    $this->em->flush();
+
+    return true;
+}
+
+public function updateUser(array $data, int $id): ?User
+{
+    $user = $this->userRepository->find($id);
+
+    if (!$user) {
+        return null;
+    }
+
+    $user->setEmail($data['email'] ?? $user->getEmail());
+    $user->setFirstName($data['firstName'] ?? $user->getFirstName());
+    $user->setLastName($data['lastName'] ?? $user->getLastName());
+
+    $this->em->flush();
+
+    return $user;
+}
+
+public function getUser(int $id): ?User
+{
+    return $this->userRepository->find($id);
+
+}
+
+}
+```
+
+- test with Postmate
+- weird upsert bug where patch was duplicating entries. I turned postmate off and on again.
 
 ### Questions I should be able to answer:
 

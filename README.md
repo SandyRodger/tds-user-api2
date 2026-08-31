@@ -74,18 +74,48 @@ RUN pecl install xdebug \
  - pecl is PHP's other package library, for extensions not bundled into core
  - xdebug is a development tool. It let's you step through debugging and pause mid-execution. You'd never ship it to prodution because it slows everything way down.
 
-#### WORK DIR & COPY
+#### WORK DIR
 
 ```
+WORKDIR /var/www
+```
+
+- `WORKDIR /var/www` sets the container's working directory. The folder from which every command runs.
+- It is where php-fpm will look for your app.
+- `/var/www` is the conventional home for web apps on Linux.
+- Docker will create the folder if it's not there.
+
+#### COPY 
+
+```
+COPY . /var/www
+```
+
+- `COPY . /var/www` copies your project files from your machine into the image.
+- The `.` is the build context, which is copied into `/var/www`.
+- This is the moment your SSymfony app becomes part of the container rather than living only on your laptopn
+
+#### complete Dockerfile
+
+```
+FROM php:8.3-fpm
+
+RUN apt-get update && apt-get install -y \
+    libicu-dev \
+    libzip-dev \
+    && docker-php-ext-install \
+    pdo_mysql \
+    intl \
+    zip \
+    opcache
+
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
+
 WORKDIR /var/www
 
 COPY . /var/www
 ```
-
-- `WORKDIR /var/www` sets the container's working directory. The folder from which every command runs. It is where php-fpm will look for your app.
-- `/var/www` is the conventional home for web apps on Linux.
-- Docker will create the folder if it's not there.
-- `COPY . /var/www` copies your project files from our machine into the image.
 
 [lost my notes lines 23 - 276 & 306 - 400ish)
 
@@ -118,5 +148,5 @@ class HealthController
 
 ### Questions for Claude:
 
-1. Clarification: You say "/var/www. This is the point your app becomes part of the container rather than just living on your laptop." , but isn't the container also running
+1. Clarification: You say "/var/www. This is the point your app becomes part of the container rather than just living on your laptop." , but isn't the container also running on my laptop?
 2. 

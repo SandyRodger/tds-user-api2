@@ -462,7 +462,7 @@ BUG_PERSISTS:
 
 - What this told me: the command now runs all the way through — past the platform check, through Symfony's console, and actually executes the SQL query against the database, returning 1 as expected. The original problem is resolved.
 
-### Module 2 b) User Entity
+### Module 3 b) User Entity
 
 - an entity is a PHP class that maps to a database table.
 - Each property on the class becomes a column in the table.

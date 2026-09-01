@@ -684,8 +684,126 @@ public function getUser(int $id): ?User
 
 - Do we have PHPUnit? `docker compose exec php php bin/phpunit --version`
 - If not install: `docker compose exec php composer require --dev symfony/test-pack`
-- `composer: not found`:
-   - `docker compose exec php php /usr/bin/composer require --dev symfony/test-pack`
+   - `composer: not found`:
+- `docker compose exec php php /usr/bin/composer require --dev symfony/test-pack`
+   - `Could not open input file: /usr/bin/composer`
+   - (this is exactly what happened on the first go-through. How could I prevent it?)
+- `which composer`
+   - `/usr/local/bin/composer`
+- `docker compose exec php sh -c 'command -v composer; ls -la /usr/bin/composer /usr/local/bin/composer 2>/dev/null; echo "---"; find / -name composer -type f 2>/dev/null | head'
+   - [nothing]
+- Install it into the running container with: `docker compose exec php sh -c 'curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer'
+docker compose exec php composer --version`
+- but that is a temporary fix. It needs to be write into the Dockerfile:
+   - `COPY --from=composer:2 /usr/bin/composer /usr/bin/composer` <- right before the WORKDIR line
+   -  Then rebuild the image so the new layers take effect:
+
+```
+docker compose build php
+docker compose up -d
+docker compose exec php composer --version
+```
+
+- check with `composer --version`
+- now install symfony test-pack:
+   - `docker compose exec php composer require --dev symfony/test-pack`
+- Install Mockery: `docker compose exec php composer require --dev mockery/mockery`
+##### tests/Service/UserServiceTest.php
+
+```
+<?php
+
+namespace App\Tests\Service;
+
+use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
+use Mockery;
+use App\Entity\User;
+use App\Repository\UserRepository;
+use App\Service\UserService;
+use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\TestCase;
+
+class UserServiceTest extends TestCase
+{
+    use MockeryPHPUnitIntegration;
+
+    public function testCreateUserPersistsAndFlushes(): void
+    {
+        $em = Mockery::mock(EntityManagerInterface::class);
+        $repo = Mockery::mock(UserRepository::class);
+
+        $em->shouldReceive('persist')->once();
+        $em->shouldReceive('flush')->once();
+
+        $service = new UserService($repo, $em);
+
+        $service->createUser([
+            'email' => 'test@example.com',
+            'firstName' => 'Test',
+            'lastName' => 'User',
+        ]);
+    }
+
+    public function testGetUser(): void
+    {
+        // arrange
+        $fakeUser = new User();
+        $fakeUser->setEmail('test@example.com');
+
+        $repo = Mockery::mock(UserRepository::class);
+        $repo->shouldReceive('find')->andReturn($fakeUser);
+
+        $em = Mockery::mock(EntityManagerInterface::class);
+
+        $service = new UserService($repo, $em);
+        // Act
+        $result = $service->getUser(1);
+        // Assert
+        $this->assertSame($fakeUser, $result);
+    }
+
+    public function testUpdateUser(): void
+    {
+        // Arrange
+        $fakeUser = new User();
+        $fakeUser->setEmail('1@example.com');
+        $fakeUser->setFirstName('Test');
+        $fakeUser->setLastName('Test');
+
+        $em = Mockery::mock(EntityManagerInterface::class);
+        $em->shouldReceive('flush')->once();
+
+        $repo = Mockery::mock(UserRepository::class);
+        $repo->shouldReceive('find')->andReturn($fakeUser);
+        
+        $service = new UserService($repo, $em);
+        
+        // Act
+        $service->updateUser(['email' => '2@example.com'], 1);
+
+        // Assert
+        $this->assertSame('2@example.com', $fakeUser->getEmail());
+    }
+
+    public function testGetUserReturnsNullWhenNotFound(): void
+    {
+        // Arrange
+        $repo = Mockery::mock(UserRepository::class);
+        $repo->shouldReceive('find')->andReturn(null);
+           
+        $em = Mockery::mock(EntityManagerInterface::class);
+
+        $service = new UserService($repo, $em);
+        // Act
+        $result = $service->getUser(1);
+        
+        // Assert
+        $this->assertNull($result);
+    }
+}
+```
+
+- test with `docker compose exec php php bin/phpunit`
 
 ### Questions I should be able to answer:
 

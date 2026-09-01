@@ -171,6 +171,31 @@ services:
    1) `.:/var/www` shares your project folder into the container so nginx can see your app.
    2) `./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf` injects a config file we'll write later. It's purpose is to tell nginx how to hand PHP requests to php-fpm.
 - `depends_on`: - php` this is the start order control. It tells compose to boot the php container before nginx needs it there to talk to.
+#### complete docker-compose.yml
+
+```
+services:
+  php:
+    build: .
+    volumes:
+      - .:/var/www
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: app
+    ports:
+      - "3306:3306"
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+```
 
 ##### `docker/nginx/default.conf`
 

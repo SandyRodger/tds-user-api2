@@ -680,6 +680,13 @@ public function getUser(int $id): ?User
 - test with Postmate
 - weird upsert bug where patch was duplicating entries. I turned postmate off and on again.
 
+### Module 8 - Unit testing
+
+- Do we have PHPUnit? `docker compose exec php php bin/phpunit --version`
+- If not install: `docker compose exec php composer require --dev symfony/test-pack`
+- `composer: not found`:
+   - `docker compose exec php php /usr/bin/composer require --dev symfony/test-pack`
+
 ### Questions I should be able to answer:
 
 1. Walk me through building a complete Symfony API app from scratch.

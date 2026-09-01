@@ -171,6 +171,7 @@ services:
    1) `.:/var/www` shares your project folder into the container so nginx can see your app.
    2) `./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf` injects a config file we'll write later. It's purpose is to tell nginx how to hand PHP requests to php-fpm.
 - `depends_on`: - php` this is the start order control. It tells compose to boot the php container before nginx needs it there to talk to.
+
 #### complete docker-compose.yml
 
 ```
@@ -328,19 +329,19 @@ make sure composer.json looks like this:
         "php": ">=8.1",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "doctrine/doctrine-bundle": "^2.12",
-        "doctrine/doctrine-migrations-bundle": "^3.3",
-        "doctrine/orm": "^3.6",
-        "phpdocumentor/reflection-docblock": "^5.2",
-        "phpstan/phpdoc-parser": "^2.3",
+        "doctrine/doctrine-bundle": "^2.12",                  <- NEW
+        "doctrine/doctrine-migrations-bundle": "^3.3",        <- NEW
+        "doctrine/orm": "^3.6",                               <- NEW
+        "phpdocumentor/reflection-docblock": "^5.2",          <- NEW
+        "phpstan/phpdoc-parser": "^2.3",                      <- NEW
         "symfony/console": "6.4.*",
         "symfony/dotenv": "6.4.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "6.4.*",
-        "symfony/property-access": "6.4.*",
-        "symfony/property-info": "6.4.*",
+        "symfony/property-access": "6.4.*",                   <- NEW
+        "symfony/property-info": "6.4.*",                     <- NEW
         "symfony/runtime": "6.4.*",
-        "symfony/serializer": "6.4.*",
+        "symfony/serializer": "6.4.*",                        <- NEW
         "symfony/yaml": "6.4.*"
     },
     "config": {
@@ -394,12 +395,12 @@ make sure composer.json looks like this:
             "require": "6.4.*"
         }
     },
-    "require-dev": {
-        "mockery/mockery": "^1.6",
-        "phpunit/phpunit": "^12.5",
-        "symfony/browser-kit": "6.4.*",
-        "symfony/css-selector": "6.4.*",
-        "symfony/maker-bundle": "^1.67"
+    "require-dev": {                               <- NEW
+        "mockery/mockery": "^1.6",                 <- NEW
+        "phpunit/phpunit": "^12.5",                <- NEW
+        "symfony/browser-kit": "6.4.*",            <- NEW
+        "symfony/css-selector": "6.4.*",           <- NEW
+        "symfony/maker-bundle": "^1.67"            <- NEW
     }
 }
 ```
@@ -519,7 +520,7 @@ BUG_PERSISTS:
 ### Read
 
 - start with R because it's simpler to verify. "smoke test"
-- Rememeber your controller can't talk to the db directly. It goes through a repository.
+- Remember your controller can't talk to the db directly. It goes through a repository.
 
 ###### UserController.php
 

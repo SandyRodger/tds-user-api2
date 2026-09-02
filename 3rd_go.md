@@ -1,6 +1,12 @@
 ### 1a) Symfony
 
 - composer create-project symfony/skeleton:"6.4.*" tds-user-api3
+-   composer require
+  symfony/serializer
+  symfony/property-access`
+
+- composer.json should look like this:
+
 ```composer.json
 {
     "type": "project",
